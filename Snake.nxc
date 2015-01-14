@@ -1,0 +1,369 @@
+//Snake
+
+//Snake.bas, developed by Joseph Dykstra and Josiah K, finished on 04-30-2012.
+//Snake.cpp, ported from Snake.bas by Joseph Dykstra,  finished on 07-13-2012.
+//Snake.nxc, ported from Snake.cpp by Joseph Dykstra,  finished on 10-02-2012.
+//Many modifications since, though...
+
+#include "+Button+-.nxc"
+#include "+HighScore.nxc"
+
+#define  b       4  //block size
+#define  height  16 //height of field
+#define  width   16 //width  of field
+#define  SX     35 //"SNAKE" title x
+#define  ST   0   //STartlength
+#define  GR   1   //GRow
+#define  SP   2   //SPeedup
+#define  DE   3   //DElaytime
+#define  RAND   0 //RANDom
+#define  PLUS   1 //PLUS
+
+//startup limits, random, & custom settings in selectGame()
+const int limits[4][2]={{8,5,100,100},{3,1,9,151}};
+
+
+int n, x, y, z, fx, fy, lx, ly, gametype, dir=1, cdir=1, score=0, clrx1, clry1;
+int clrx2, clry2, length, grow, startlength, delaytime, board[width+1][height+1];
+float speedup;
+bool foodate=0,dead=0,wrap=0,playagain=1,newsettings=0,highmade=false;
+string msg="", accesshigh="";
+
+
+void intro() {
+	TextOut(SX,LCD_LINE1,"SNAKE",0);
+	TextOut(0, LCD_LINE4,"Made by Joseph D",0);
+	TextOut(0, LCD_LINE5,"    and Josiah K",0);
+	Wait(3000);
+	ClearLine(LCD_LINE4); ClearLine(LCD_LINE5);
+}
+
+
+void customGame()
+	{
+	until (ButtonState(BTNLEFT)==false&&ButtonState(BTNRIGHT)==false) {}
+	int addtoz=1;
+	for (x=0;x<4;x++)
+		{
+		int l=limits[PLUS][x];
+		ClearScreen();
+		TextOut(SX,LCD_LINE1,"SNAKE",0);
+		if (x==ST) {TextOut(0,LCD_LINE4,"Start Length=",0); addtoz=1;}
+		if (x==GR) {TextOut(0,LCD_LINE4," Grow Length=",0); addtoz=1;}
+		if (x==SP) {TextOut(0,LCD_LINE4,"  Speed Up=",  0); addtoz=10;}
+		if (x==DE) {TextOut(0,LCD_LINE4,"  Delay Time=",0); addtoz=10;}
+		TextOut(45,LCD_LINE8,"OK",0);
+		z=0;
+		until (ButtonState(BTNCENTER)==false) {}
+		while (ButtonState(BTNCENTER)==false)
+			{
+			z=senseButton(z,true,addtoz,limits[RAND][x],false);
+			if (x==SP) TextOut(70,LCD_LINE4,StrCat(".",NumToStr(l+z),"    "),0);///////////////
+			else       TextOut(80,LCD_LINE4,StrCat(NumToStr(z+l-1),"    "),0);
+			}
+		if (x==ST) {startlength=(z+l-1);}
+		if (x==GR) {grow=       (z+l-1);}
+		if (x==SP) {speedup=((l*10)+z);speedup/=100;}////////////////////////////////////////
+		if (x==DE) {delaytime=  (z+l-1);}
+		until (ButtonState(BTNCENTER)==false) {}
+		}
+	}
+
+
+void selectGame()
+	{
+	accesshigh="Snake";
+	while (ButtonPressed(BTNRIGHT)==false)
+		{
+		gametype=senseButton(gametype,false,1,5,false); //changed "addtoz" to "1"
+		ClearScreen();
+		TextOut(SX,LCD_LINE1,"SNAKE",  0);
+		TextOut(2, LCD_LINE2,"Choose:",0);
+		TextOut(2, LCD_LINE3,"Easy",   0);
+		TextOut(2, LCD_LINE4,"Medium", 0);
+		TextOut(2, LCD_LINE5,"Hard",   0);
+		TextOut(2, LCD_LINE6,"Death",  0);
+		TextOut(2, LCD_LINE7,"Random", 0);
+		TextOut(2, LCD_LINE8,"Custom", 0);
+		TextOut(88,LCD_LINE8,"OK", 0);
+		RectOut(0,40-(gametype*8),49,8,0);
+		Wait(50);
+		}
+	TextOut(SX,LCD_LINE1,"SNAKE",  0);
+	until (ButtonPressed(BTNRIGHT)==false) {}
+	if (gametype!=4)
+		{
+		TextOut(0,LCD_LINE6-4,"",              4096);
+		TextOut(0,LCD_LINE7,"Wrap Screen?",    4096);
+		TextOut(0,LCD_LINE8,"Yes          No", 4096);
+		until (ButtonPressed(BTNLEFT)||ButtonPressed(BTNRIGHT)) {}
+		wrap=ButtonPressed(BTNLEFT);
+		if (wrap) {accesshigh=StrCat(accesshigh,"W");}
+		}
+	if (gametype==0)
+		{accesshigh=StrCat(accesshigh,"Easy.dat");
+		grow=2;   startlength=3;   speedup=0.975;  delaytime=200;}
+	else if (gametype==1)
+		{accesshigh=StrCat(accesshigh,"Medium.dat");
+		grow=3;   startlength=3;   speedup=0.9375; delaytime=140;}
+	else if (gametype==2)
+		{accesshigh=StrCat(accesshigh,"Hard.dat");
+		grow=4;   startlength=3;   speedup=0.9;    delaytime=80;}
+	else if (gametype==3)
+		{accesshigh=StrCat(accesshigh,"Death.dat");
+		grow=10;  startlength=10;  speedup=1;      delaytime=100;}
+	else if (gametype==4)
+		{
+		accesshigh="";
+		float temp;
+		startlength= ( Random(limits[RAND][ST]) +limits[PLUS][ST]);
+		grow=        ( Random(limits[RAND][GR]) +limits[PLUS][GR]);
+		temp=          Random(limits[RAND][SP]);
+		temp/=100;
+		temp+=                limits[PLUS][SP];
+		speedup=temp/10;
+		temp*=100;
+		delaytime=   ( Random(limits[RAND][DE]) +limits[PLUS][DE]);
+		wrap=        ( Random(2) );
+		}
+	else if (gametype==5)
+		{
+		accesshigh="";
+		customGame();
+		}
+	ClearScreen();
+	}
+
+void boardInit() 
+	{
+	for (x=0;x<=width;x++)
+		{
+		for (y=0;y<=height;y++)
+			{
+			board[x][y]=0;
+			}
+		}
+	for (x=0;x<startlength;x++)
+		{
+		board[x][0]=x+1;
+		}
+	score=0;
+	foodate=0;
+	dead=0;
+	dir=1;
+	cdir=1;
+	length=startlength;
+	fx=startlength-1;
+	fy=0;
+	lx=0;
+	ly=0;
+	SetLongAbort(true);
+	}
+		
+		
+void snakeMove()
+	{
+	for  (x=0;x<width;x++)
+		{
+		for  (y=0;y<height;y++)
+			{
+			if (board[x][y]==1)  {clrx1=x; clry1=y;}
+			if (board[x][y]==-1) {clrx2=x; clry2=y;}
+			}
+		}
+	for (x=0;x<delaytime/5;x++)
+		{
+		if (ButtonPressed(0)&&cdir!=(3)) {dir=0;}//D
+		if (ButtonPressed(1)&&cdir!=(2)) {dir=1;}//R
+		if (ButtonPressed(2)&&cdir!=(1)) {dir=2;}//L
+		if (ButtonPressed(3)&&cdir!=(0)) {dir=3;}//U
+		Wait(5);
+		}
+	if (dir==2) //LEFT
+		{
+		cdir=2;
+		if  (fx<=0)        {dead=!wrap; fx=width;}
+		if  (!dead)        {n=board[fx-1][fy];}
+		if  (n>1)          {dead=1;}
+		if  (n<=1)         {fx=fx-1;board[fx][fy]=length+1;}
+		if  (n==-1)        {foodate=1;length=length+grow;}
+		}
+	if (dir==3) //UP
+		{
+		cdir=3;
+		if  (fy<=0)        {dead=!wrap; fy=height;}
+		if  (!dead)        {n=board[fx][fy-1];}
+		if  (n>1)          {dead=1;}
+		if  (n<=1)         {fy=fy-1;board[fx][fy]=length+1;}
+		if  (n==-1)        {foodate=1;length=length+grow;}
+		}
+	if (dir==1) //RIGHT
+		{
+		cdir=1;
+		if  (fx>=width-1)  {dead=!wrap; fx=-1;}
+		if  (!dead)        {n=board[fx+1][fy];}
+		if (n>1)           {dead=1;}
+		if (n<=1)          {fx=fx+1;board[fx][fy]=length+1;}
+		if (n==-1)         {foodate=1;length=length+grow;}
+		}
+	if (dir==0) //DOWN
+		{
+		cdir=0;
+		if  (fy>=height-1) {dead=!wrap; fy=-1;}
+		if  (!dead)        {n=board[fx][fy+1];}
+		if (n>1)           {dead=1;}
+		if (n<=1)          {fy=fy+1;board[fx][fy]=length+1;}
+		if (n==-1)         {foodate=1;length+=grow;}
+		}
+	if (dead==0) //GROW
+		{
+		for  (x=0;x<width;x++)
+			{
+			for  (y=0;y<height;y++)
+				{
+				if (!foodate) {clrx2=-1; clry2=-1;}
+				if (board[x][y]==1) {lx=x;ly=y;}
+				if (board[x][y]>=1) {board[x][y]--;}
+				}
+			}
+		}
+	}
+
+
+void snakeDraw()
+	{
+	RectOut(clrx1*b,63-b-clry1*b,b,b,36); //Fill+Invert
+	if (clrx2!=-1&&clry2!=-1)
+		{RectOut(clrx2*b,63-clry2*b,b,b,36);} //Fill+Invert
+
+	LineOut(64,0,64,64,0);
+	for (y=0;y<height;y++)
+		{
+		for (x=0;x<width;x++)
+			{
+			if (board[x][y]>0)
+				//{RectOut(x*b,59-y*b,b,b,0);}      //Hollow
+				{RectOut(x*b,61-y*b,b-2,b-2,32);} //Filled
+			if (board[x][y]<0)
+				{CircleOut(x*b+1,62-y*b,(b-1)/2,32);}
+			}
+		}
+	if (score>readHigh(accesshigh)&&gametype<4)
+		{writeHigh(accesshigh,score);highmade=true;}
+	TextOut(65,LCD_LINE1,"Score",0);
+	NumOut( 65,LCD_LINE2,score,0);
+	if (gametype<4)
+		{
+		TextOut(65,LCD_LINE4,"High",0);
+		NumOut( 65,LCD_LINE5,readHigh(accesshigh),0);
+		if (!highmade) TextOut(65,LCD_LINE6,readHighName(accesshigh),0);
+		else           TextOut(65,LCD_LINE6,"",4096);
+		}
+	}
+
+
+void sendDebugMessages() //Disable this function, unless testing, adds ~240 MS
+	{//don't show: result, fsize, handle, startlength, grow, dead, cdir, board[][]
+	Wait(60);
+	msg=StrCat("n=",NumToStr(n)," x=",NumToStr(x)," y=",NumToStr(y));
+	SendResponseString(MAILBOX10,msg);
+	Wait(60);
+	msg=StrCat("fx=",NumToStr(fx)," fy=",NumToStr(fy));
+	msg=StrCat(msg," lx=",NumToStr(lx)," ly=",NumToStr(ly));
+	SendResponseString(MAILBOX10,msg);
+	Wait(60);
+	msg=StrCat("dir=",NumToStr(dir)," score=",NumToStr(score));
+	msg=StrCat(msg," length=",NumToStr(length));
+	SendResponseString(MAILBOX10,msg);
+	Wait(60);
+	msg=StrCat("DelayTime=",NumToStr(delaytime)," SpeedUp=",NumToStr(speedup));
+	msg=StrCat(msg," Food8=",NumToStr(foodate)," GameType=",NumToStr(gametype));
+	SendResponseString(MAILBOX10,msg);
+	}
+		
+		
+void foodMake()
+	{
+	z=1;
+	while (z)
+		{
+		x=(Random(width-1)+1);
+		y=(Random(height-1)+1);
+		if (board[x][y]==0) {z=0; board[x][y]=-1;}
+		}
+	foodate=0;
+	dead=0;
+	}
+
+
+void snakeGrow()
+	{
+	if  (dead==false)
+		{
+		for (y=0;y<height;y++)
+			{
+			for (x=0;x<width;x++)
+				{if (board[x][y]>=1) {board[x][y]+=grow;} }
+			}
+		score+=1;
+		delaytime*=speedup;
+		}
+	}
+
+		
+void gameOver()
+	{
+	PlayTone(500,500);
+	ClearScreen();
+	if (highmade) {writeHighName(accesshigh,score);}
+	ClearScreen();
+	LineOut(64,0,64,64,0);
+	TextOut(0,LCD_LINE4,"GAME OVER",0);
+	TextOut(65,LCD_LINE1,"Score",0);
+	NumOut( 65,LCD_LINE2,score,0);
+	if (gametype<4)
+		{
+		TextOut(65,LCD_LINE4,"High",0);
+		NumOut( 65,LCD_LINE5,readHigh(accesshigh),0);
+		TextOut(65,LCD_LINE6,readHighName(accesshigh),0);
+		}
+	Wait(2000);
+	TextOut(0,LCD_LINE7,"Play Again?",0);
+	TextOut(0,LCD_LINE8,"Yes          No",0);
+	until (ButtonPressed(BTNLEFT)||ButtonPressed(BTNRIGHT)) {}
+	playagain=ButtonPressed(BTNLEFT);
+	until (ButtonPressed(BTNLEFT)==0&&ButtonPressed(BTNRIGHT)==0) {}
+	if (playagain)
+		{
+		TextOut(0,LCD_LINE7,"Prev. Settings?",0);
+		TextOut(0,LCD_LINE8,"Yes          No",0);
+		until (ButtonPressed(BTNLEFT)||ButtonPressed(BTNRIGHT)) {}
+		newsettings=ButtonPressed(BTNRIGHT);
+		until (ButtonPressed(BTNLEFT)==0&&ButtonPressed(BTNRIGHT)==0) {}
+		if (newsettings) selectGame();
+		else ClearScreen();
+		}
+	}
+
+
+task main()
+	{
+	intro();
+	selectGame();
+	while (playagain)
+		{
+		boardInit();
+		while (dead==false)
+			{
+			foodMake();
+			while (foodate==0&&dead==0)
+				{
+				//sendDebugMessages();
+				snakeDraw();
+				snakeMove();
+				}
+			snakeGrow();
+			}
+		gameOver();
+		}
+	}

@@ -1,0 +1,130 @@
+//Snake
+#define  b        4  //block size
+#define  height   16 //height of field
+#define  width    16 //width  of field
+#define  strtlen  3
+
+int length=strtlen, fx=strtlen-1, fy=0, lx=0, ly=0, lbp=0, dir=1, cdir=1;
+int grow=1, delaytime=200, board[width*(height+1)], n, x, y, z, score=0;
+float speedup=0.9;
+bool foodate=0, dead=0;
+
+void snakeInOut() {
+//INPUT
+	for (x=0;x<delaytime/5;x++) {
+		if (ButtonPressed(1)==0 && lbp==1) { //Right
+			lbp=0;
+		}
+		if (ButtonPressed(1)==1 && lbp!=1) { //Right
+			if (cdir!=2) dir=1;
+			if (cdir==1) dir=0;              //Down
+			lbp=1;
+		}
+		if (ButtonPressed(2)==0 && lbp==2) { //Left
+			lbp=0;
+		}
+		if (ButtonPressed(2)==1 && lbp!=2) { //Left
+			if (cdir!=1) dir=2;
+			if (cdir==2) dir=0;              //Down
+			lbp=2;
+		}
+		if (ButtonPressed(3)==0 && lbp==3) { //Center
+			lbp=0;
+		}
+		if (ButtonPressed(3)==1 && lbp!=3) { //Center
+			if (cdir!=0) dir=3;
+			lbp=3;
+		}
+		Wait(5);
+	}
+	if (dir==2) { //LEFT
+		cdir=2;
+		if  (fx<=0)        {dead=1; fx=width;}
+		if  (!dead)        {n=board[fy*height+fx-1];}
+		if  (n>1)          {dead=1;}
+		if  (n<=1)         {fx=fx-1;board[fy*height+fx]=length+1;}
+		if  (n==-1)        {foodate=1;length=length+grow;}
+	} else if (dir==3) { //UP
+		cdir=3;
+		if  (fy<=0)        {dead=1; fy=height;}
+		if  (!dead)        {n=board[fy*height+fx-height];}
+		if  (n>1)          {dead=1;}
+		if  (n<=1)         {fy=fy-1;board[fy*height+fx]=length+1;}
+		if  (n==-1)        {foodate=1;length=length+grow;}
+	} else if (dir==1) { //RIGHT
+		cdir=1;
+		if (fx>=width-1)   {dead=1; fx=-1;}
+		if (!dead)         {n=board[fy*height+fx+1];}
+		if (n>1)           {dead=1;}
+		if (n<=1)          {fx=fx+1;board[fy*height+fx]=length+1;}
+		if (n==-1)         {foodate=1;length=length+grow;}
+	} else if (dir==0) { //DOWN
+		cdir=0;
+		if (fy>=height-1)  {dead=1; fy=-1;}
+		if (!dead)         {n=board[fy*height+fx+height];}
+		if (n>1)           {dead=1;}
+		if (n<=1)          {fy=fy+1;board[fy*height+fx]=length+1;}
+		if (n==-1)         {foodate=1;length+=grow;}
+	}
+	if (dead==0) { //GROW
+		for (x=0; x<width; x++) {
+			for  (y=0; y<height; y++) {
+				if (board[y*height+x]==1) {
+					lx=x;
+					ly=y;
+				}
+				if (board[y*height+x]>=1) {
+					board[y*height+x]--;
+				}
+			}
+		}
+	}
+//OUTPUT
+	LineOut(64,0,64,64,DRAW_OPT_CLEAR_WHOLE_SCREEN);
+	for (y=0; y<height; y++) {
+		for (x=0; x<width; x++) {
+			if (board[y*height+x]>0 && dead==false) { //Filled
+				RectOut(x*b, 61-y*b, b-2, b-2, 32);
+			}
+			if (board[y*height+x]<0) {
+				CircleOut(x*b+1, 62-y*b, (b-1)/2, 32);
+			}
+		}
+	}
+	TextOut(65, LCD_LINE1, "Score", 0);
+	NumOut(65, LCD_LINE2, score, 0);
+}
+
+task main() {
+	for (x=0;x<=width;x++) {
+		for (y=0;y<=height;y++) {
+			board[y*height+x]=0;
+			}
+		}
+	for (x=0;x<strtlen;x++) {
+		board[x]=x+1;
+	}
+	while (dead==false) {
+		z=1;
+		while (z) {
+			x=(Random(width-1)+1);
+			y=(Random(height-1)+1);
+			if (board[y*height+x]==0) {z=0; board[y*height+x]=-1;}
+		}
+		foodate=0;
+		dead=0;
+		while (foodate==0&&dead==0) snakeInOut();
+		if (dead==false) {
+			for (y=0;y<height;y++) {
+				for (x=0;x<width;x++) {
+					if (board[y*height+x]>=1) {
+						board[y*height+x]+=grow;
+					}
+				}
+			}
+			score+=1;
+			delaytime*=speedup;
+		}
+	}
+	PlayTone(500,500); Wait(2000);
+}
