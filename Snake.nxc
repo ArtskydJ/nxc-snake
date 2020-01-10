@@ -5,8 +5,9 @@
 //Snake.nxc, ported from Snake.cpp by Joseph Dykstra,  finished on 10-02-2012.
 //Many modifications since, though...
 
-#include "+Button+-.nxc"
-#include "+HighScore.nxc"
+// https://github.com/ArtskydJ/nxc-modules
+#include "../nxc-modules/Button+-.nxc"
+#include "../nxc-modules/HighScore.nxc"
 
 #define  b       4  //block size
 #define  height  16 //height of field
@@ -29,6 +30,9 @@ float speedup;
 bool foodate=0,dead=0,wrap=0,playagain=1,newsettings=0,highmade=false;
 string msg="", accesshigh="";
 
+bool ButtonPressed2(int whichButton) {
+	return ButtonPressed(whichButton, false);
+}
 
 void intro() {
 	TextOut(SX,LCD_LINE1,"SNAKE",0);
@@ -73,7 +77,7 @@ void customGame()
 void selectGame()
 	{
 	accesshigh="Snake";
-	while (ButtonPressed(BTNRIGHT)==false)
+	while (ButtonPressed2(BTNRIGHT)==false)
 		{
 		gametype=senseButton(gametype,false,1,5,false); //changed "addtoz" to "1"
 		ClearScreen();
@@ -90,14 +94,14 @@ void selectGame()
 		Wait(50);
 		}
 	TextOut(SX,LCD_LINE1,"SNAKE",  0);
-	until (ButtonPressed(BTNRIGHT)==false) {}
+	until (ButtonPressed2(BTNRIGHT)==false) {}
 	if (gametype!=4)
 		{
 		TextOut(0,LCD_LINE6-4,"",              4096);
 		TextOut(0,LCD_LINE7,"Wrap Screen?",    4096);
 		TextOut(0,LCD_LINE8,"Yes          No", 4096);
-		until (ButtonPressed(BTNLEFT)||ButtonPressed(BTNRIGHT)) {}
-		wrap=ButtonPressed(BTNLEFT);
+		until (ButtonPressed2(BTNLEFT)||ButtonPressed2(BTNRIGHT)) {}
+		wrap=ButtonPressed2(BTNLEFT);
 		if (wrap) {accesshigh=StrCat(accesshigh,"W");}
 		}
 	if (gametype==0)
@@ -173,10 +177,10 @@ void snakeMove()
 		}
 	for (x=0;x<delaytime/5;x++)
 		{
-		if (ButtonPressed(0)&&cdir!=(3)) {dir=0;}//D
-		if (ButtonPressed(1)&&cdir!=(2)) {dir=1;}//R
-		if (ButtonPressed(2)&&cdir!=(1)) {dir=2;}//L
-		if (ButtonPressed(3)&&cdir!=(0)) {dir=3;}//U
+		if (ButtonPressed2(0)&&cdir!=(3)) {dir=0;}//D
+		if (ButtonPressed2(1)&&cdir!=(2)) {dir=1;}//R
+		if (ButtonPressed2(2)&&cdir!=(1)) {dir=2;}//L
+		if (ButtonPressed2(3)&&cdir!=(0)) {dir=3;}//U
 		Wait(5);
 		}
 	if (dir==2) //LEFT
@@ -330,16 +334,16 @@ void gameOver()
 	Wait(2000);
 	TextOut(0,LCD_LINE7,"Play Again?",0);
 	TextOut(0,LCD_LINE8,"Yes          No",0);
-	until (ButtonPressed(BTNLEFT)||ButtonPressed(BTNRIGHT)) {}
-	playagain=ButtonPressed(BTNLEFT);
-	until (ButtonPressed(BTNLEFT)==0&&ButtonPressed(BTNRIGHT)==0) {}
+	until (ButtonPressed2(BTNLEFT)||ButtonPressed2(BTNRIGHT)) {}
+	playagain=ButtonPressed2(BTNLEFT);
+	until (ButtonPressed2(BTNLEFT)==0&&ButtonPressed2(BTNRIGHT)==0) {}
 	if (playagain)
 		{
 		TextOut(0,LCD_LINE7,"Prev. Settings?",0);
 		TextOut(0,LCD_LINE8,"Yes          No",0);
-		until (ButtonPressed(BTNLEFT)||ButtonPressed(BTNRIGHT)) {}
-		newsettings=ButtonPressed(BTNRIGHT);
-		until (ButtonPressed(BTNLEFT)==0&&ButtonPressed(BTNRIGHT)==0) {}
+		until (ButtonPressed2(BTNLEFT)||ButtonPressed2(BTNRIGHT)) {}
+		newsettings=ButtonPressed2(BTNRIGHT);
+		until (ButtonPressed2(BTNLEFT)==0&&ButtonPressed2(BTNRIGHT)==0) {}
 		if (newsettings) selectGame();
 		else ClearScreen();
 		}
